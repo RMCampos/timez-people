@@ -61,6 +61,8 @@ let updateInterval = null;
 const baseTimezoneSelect = document.getElementById('baseTimezone');
 const baseTimezoneNameInput = document.getElementById('baseTimezoneName');
 const timezoneSelect = document.getElementById('timezoneSelect');
+const exportBtn = document.getElementById('exportBtn');
+const importFileInput = document.getElementById('importFile');
 const modal = document.getElementById('modal');
 const modalTitle = document.getElementById('modalTitle');
 const personNameInput = document.getElementById('personName');
@@ -134,6 +136,8 @@ function setupEventListeners() {
     baseTimezoneSelect.addEventListener('change', handleBaseTimezoneChange);
     baseTimezoneNameInput.addEventListener('input', handleBaseTimezoneNameChange);
     timezoneSelect.addEventListener('change', handleTimezoneSelectChange);
+    exportBtn.addEventListener('click', handleExport);
+    importFileInput.addEventListener('change', handleImport);
     modalSave.addEventListener('click', handleModalSave);
     modalCancel.addEventListener('click', closeModal);
     modal.addEventListener('click', (e) => {
@@ -161,6 +165,92 @@ function handleBaseTimezoneNameChange(e) {
     baseTimezoneName = e.target.value;
     saveToLocalStorage();
     renderTable();
+}
+
+// Handle export data
+function handleExport() {
+    const exportData = {
+        people: people,
+        baseTimezone: baseTimezone,
+        baseTimezoneName: baseTimezoneName,
+        exportDate: new Date().toISOString()
+    };
+
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `timez-people-data-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+// Handle import data
+function handleImport(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.name.endsWith('.json')) {
+        alert('Please select a valid JSON file.');
+        e.target.value = '';
+        return;
+    }
+
+    // Validate file size (5 MB = 5 * 1024 * 1024 bytes)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+        alert('File size must be less than 5 MB.');
+        e.target.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const importData = JSON.parse(event.target.result);
+            
+            // Validate the structure
+            if (!importData.people || !Array.isArray(importData.people)) {
+                alert('Invalid data format: missing or invalid people array.');
+                return;
+            }
+
+            // Import the data
+            people = importData.people;
+            
+            if (importData.baseTimezone) {
+                baseTimezone = importData.baseTimezone;
+                baseTimezoneSelect.value = baseTimezone;
+            }
+            
+            if (importData.baseTimezoneName !== undefined) {
+                baseTimezoneName = importData.baseTimezoneName;
+                baseTimezoneNameInput.value = baseTimezoneName;
+            }
+
+            saveToLocalStorage();
+            referenceHour = null;
+            renderTable();
+            
+            alert('Data imported successfully!');
+        } catch (error) {
+            alert('Error parsing JSON file: ' + error.message);
+        } finally {
+            e.target.value = '';
+        }
+    };
+
+    reader.onerror = () => {
+        alert('Error reading file.');
+        e.target.value = '';
+    };
+
+    reader.readAsText(file);
 }
 
 // Handle timezone select change (open modal to add person)
