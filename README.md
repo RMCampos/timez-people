@@ -1,7 +1,3 @@
-# Archived repo
-
-The new content can be found in Gitea: https://lightroasted.vps-kinghost.net/rmcampos/timez-people
-
 # Timez People - Team Timezone Tracker
 
 A simple, frontend-only web application to track your team members' timezones and visualize time differences in a single view.
